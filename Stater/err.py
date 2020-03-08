@@ -4,3 +4,11 @@ class AuthenticationError(Exception):
 
 class ServerNotFoundError(Exception):
     pass
+
+
+class NameAlreadyUsedError(Exception):
+    pass
+
+
+class RepoURLAlreadyUsedError(Exception):
+    pass

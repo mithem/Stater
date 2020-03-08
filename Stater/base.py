@@ -10,8 +10,8 @@ status-system of server as well as submodules
 from fileloghelper import Logger
 import pymysql.cursors
 from pymysql.err import OperationalError
-from Stater.utils import get_server_params
-from Stater.err import AuthenticationError, ServerNotFoundError
+from Stater.utils import get_server_params, encrypt
+from Stater.err import *
 import json
 
 
@@ -57,7 +57,15 @@ def exec_sql(sql_command="SELECT * FROM tasks", verbose=True, logger: Logger = N
         return result
 
 
-def register_server(name: str, description: str = "", repo_url: str = "", main_status: int = 0, components: list = []):
+def authenticate(name: str, password: str):
+    server = get_server(name)
+    if server == None:
+        raise ServerNotFoundError(f"Server '{name}' not found.")
+    enc_password = encrypt(password)
+    return server.get("password") == enc_password
+
+
+def register_server(name: str, description: str = None, repo_url: str = None, main_status: int = 0, components: list = [], password: str = None):
     """register server.
     :param name: a unique name for the server
     :param description: longer, human-readable description of the server (optional)
@@ -70,10 +78,17 @@ def register_server(name: str, description: str = "", repo_url: str = "", main_s
     :type main_status: int
     :type component_status: dict
     """
-    components = get_server_params(
-        name, description, repo_url, main_status, components)
-    exec_sql(
-        f"INSERT INTO servers (name, description, repoURL, mainStatus, componentStatus) VALUES ('{name}', '{description}', '{repo_url}', {main_status}, '{components}');")
+    components, password, joined = get_server_params(
+        name, description, repo_url, main_status, components, password)
+    try:
+        exec_sql(
+            f"INSERT INTO servers (name, description, repoURL, mainStatus, components, password, joined) VALUES ('{name}', '{description}', '{repo_url}', {main_status}, '{components}', '{password}', '{joined}');")
+    except pymysql.err.IntegrityError as e:
+        if "name" in str(e):
+            raise NameAlreadyUsedError(f"Name '{name}' is already used.")
+        if "repoURL" in str(e):
+            raise RepoURLAlreadyUsedError(
+                f"repo-url '{repo_url}' is already used.")
 
 
 def get_server(name: str = "", id: int = None):
@@ -106,3 +121,39 @@ def change_server(id: int, name: str = None, description: str = None, repo_url: 
     if components != None:
         exec_sql(
             f"UPDATE servers SET components='{json.dumps(components)}' WHERE id={id}")
+
+
+def get_all_servers(order_by: str = "id", limit: int = 10):
+    """return list of all servers, ordered by order_by, with a limit of limit"""
+    params = {
+        "id": "id",
+        "djoined": "joined",
+        "joined": "joined",
+        "name": "name",
+        "status": "mainStatus",
+        "main_status": "mainStatus"
+    }
+    if not order_by in params.keys():
+        raise ValueError("'by'-parameter not valid.")
+    if type(limit) == int:
+        if limit < 1 or limit > 50:
+            raise ValueError("limit not in range 1-50 (both included)")
+    else:
+        raise TypeError("limit not of type int.")
+    by = params[order_by]
+    return list(exec_sql(f"SELECT * FROM servers ORDER BY {by} LIMIT {limit}"))
+
+
+def delete_server(name: str = None, id: int = None):
+    if name != None:
+        if type(name) != str:
+            raise TypeError("name not of type str.")
+        server = get_server(name)
+    elif id != None:
+        if type(id) != int:
+            raise TypeError("id not of type int.")
+        server = get_server(id=id)
+    if server == None:
+        raise ServerNotFoundError("Server not found. Could not delete.")
+    id = server.get("id")
+    exec_sql(f"DELETE FROM servers WHERE id={id}")
