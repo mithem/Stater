@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Stater - ${server_name}</title>
+    <style>
+      .statusIndicator {
+        width: 30px;
+        height: 30px;
+        border-radius: 15px;
+        background-color: #eeeeee;
+        margin: auto 0px;
+      }
+      .statusIndicator.available {
+        background-color: #00ce18;
+      }
+      .statusIndicator.constrained {
+        background-color: #ffd630;
+      }
+      .statusIndicator.fail {
+        background-color: #f04542;
+      }
+      .statusIndicator.offline {
+        background-color: #0085d0;
+      }
+      .component,
+      #heading {
+        display: flex;
+      }
+      .component {
+        margin: 10px;
+      }
+      #heading > span,
+      .component > span {
+        margin: auto 10px auto 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="heading">
+      <div class="statusIndicator" id="mainStatusIndicator"></div>
+      <span>${server_name}</span>
+    </h1>
+    <a href="${repo_url}" target="_blank">${repo_url}</a>
+    <p>${server_description}</p>
+    <span id="mainStatus"></span>
+    <div id="components"></div>
+  </body>
+  <script>
+    const payload = `${json_not_parsed}`;
+    var server = null;
+    var debugVar = null;
+    function refreshServerData() {
+      var req = new XMLHttpRequest();
+      req.onreadystatechange = function() {
+        if (req.readyState === 4) {
+          if (req.status === 200) {
+            server = JSON.parse(req.responseText);
+            document.getElementById("components").innerHTML = "";
+            var componentsElement = document.getElementById("components");
+            Object.keys(server.components).forEach(c => {
+              component = server.components[c];
+              componentsElement.innerHTML +=
+                "<div class='component'><div class='statusIndicator'></div><span>" +
+                component.name +
+                "</span></div>";
+              var index = Object.keys(server.components).indexOf(c);
+              var childElement = componentsElement.children[index];
+              debugVar = childElement;
+              updateStatusIndicator(childElement.children[0], component.status);
+            });
+            updateStatus();
+          } else {
+            alert(
+              "Server response not ok. Response code: " +
+                req.status.toString() +
+                "\n" +
+                req.responseText
+            );
+          }
+        }
+      };
+      req.open("POST", "/api/getserver");
+      req.send(payload);
+    }
+    function updateStatusIndicator(statusIndicatorElement, status) {
+      var statusClass;
+      switch (status) {
+        case 0: {
+          statusClass = "available";
+          break;
+        }
+        case 1: {
+          statusClass = "constrained";
+          break;
+        }
+        case 2: {
+          statusClass = "fail";
+          break;
+        }
+        case 3: {
+          statusClass = "offline";
+        }
+      }
+      statusIndicatorElement.className = "statusIndicator " + statusClass;
+    }
+    function updateStatus() {
+      switch (server.mainStatus) {
+        case 0: {
+          document.getElementById("mainStatus").textContent =
+            "Operating nominally.";
+          document.getElementById("mainStatusIndicator").className =
+            "statusIndicator available";
+          break;
+        }
+        case 1: {
+          document.getElementById("mainStatus").textContent =
+            "Partially constrained.";
+          document.getElementById("mainStatusIndicator").className =
+            "statusIndicator constrained";
+          break;
+        }
+        case 2: {
+          document.getElementById("mainStatus").textContent = "Failed.";
+          document.getElementById("mainStatusIndicator").className =
+            "statusIndicator fail";
+          break;
+        }
+        case 3: {
+          document.getElementById("mainStatus").textContent = "Offline.";
+          document.getElementById("mainStatusIndicator").className =
+            "statusIndicator offline";
+        }
+      }
+    }
+
+    refreshServerData();
+  </script>
+</html>

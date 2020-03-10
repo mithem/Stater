@@ -12,3 +12,7 @@ class NameAlreadyUsedError(Exception):
 
 class RepoURLAlreadyUsedError(Exception):
     pass
+
+
+class ComponentNotFoundError(Exception):
+    pass
