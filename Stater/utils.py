@@ -2,6 +2,9 @@ import re
 import json
 from hashlib import sha256
 import datetime
+from fileloghelper import Logger
+
+logger = Logger("utils.log", "utils", True, True)
 
 
 def get_server_params(name: str = None, description: str = None, repo_url: str = None, main_status: int = None, components: dict = None, password: str = None):
@@ -19,6 +22,8 @@ def get_server_params(name: str = None, description: str = None, repo_url: str =
         components = {}
     if password == None:
         password = "abcdefg12345678"
+    logger.debug("repo_url " + str(repo_url))
+    logger.debug("name " + str(name))
 
     if len(name) > 20:
         raise ValueError("name argument too long (max 20)")
@@ -28,7 +33,7 @@ def get_server_params(name: str = None, description: str = None, repo_url: str =
         raise ValueError("Username invalid.")
     if len(description) > 1024:
         raise ValueError("description argument too long")
-    if not re.match("^https?://(www\.)?[\w.]+.\w{2,}$", repo_url):
+    if not re.match("^https?://(www\.)?[\w.]+\.\w{2,}[a-zA-Z/_.-]*$", repo_url):
         raise ValueError("repo_url argument invalid.")
     if type(main_status) != int:
         raise TypeError("'main_status' expected to be of type int.")

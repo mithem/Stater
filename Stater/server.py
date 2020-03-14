@@ -35,7 +35,7 @@ def api_get_server(data):
 
 @serverly.serves_post("/api/register(server)?")
 def api_register_server(data):
-    response_code = 500
+    response_code = 200
     response_msg = "error"
     try:
         base.register_server(data["name"], data.get("description", None), data.get(
@@ -57,7 +57,6 @@ def api_register_server(data):
 
 @serverly.serves_post("/api/delete(server)?")
 def api_delete_server(data):
-    # TODO more elegant and robust way!
     response_code = 500
     response_msg = "error"
     try:
@@ -68,8 +67,8 @@ def api_delete_server(data):
             delete_server_details_page(data.get("name"))
         else:
             server = base.get_server(id=data.get("id", -1))
-            base.delete_server(id=server.get("id"))
-            delete_server_details_page(server.get("name"))
+            base.delete_server(id=server.get("id", -1))
+            delete_server_details_page(server.get("name", "notaname"))
         response_code = 200
         response_msg = "Deleted server successfully (just from the Stater-system :P)."
     except err.AuthenticationError:
@@ -142,12 +141,11 @@ def api_change_server(data):
 
 @serverly.serves_post("/api/updatecomponent")
 def api_update_component(data):
-    # TODO more elegent and robust way #2
-    # TODO implement password
     response_code = 500
     response_msg = "error"
     try:
-        server_name = data.get("serverName", data.get("name", "NOTANAME"))
+        base.authenticate(data["name"], data["password"])
+        server_name = data.get("serverName", data["name"])
         component_name = data.get(
             "component", data.get("componentName", "NOTACOMPONENT"))
         status = data.get("status", data.get("newStatus", "NOTASTATUS"))
@@ -177,8 +175,8 @@ def create_server_details_page(server: dict):
     with open("Stater/src/server_template.html", "r") as f:
         template = string.Template(f.read())
     server_detail_page_content = template.safe_substitute(
-        server_name=name, json_not_parsed=json.dumps({"name": name}), server_description=server.get("description"), repo_url="<a href='" + repo_url + "' target='_blank'>" + repo_url + "</a>")
-    filename = "Stater/src/servers/" + name + ".html"
+        server_name=name, json_not_parsed=json.dumps({"name": name}), server_description=server.get("description"), repo_url="<a href='" + str(repo_url) + "' target='_blank'>" + str(repo_url) + "</a>")
+    filename = "Stater/src/servers/" + str(name) + ".html"
     with open(filename, "w") as f:
         f.write(server_detail_page_content)
     serverly.static_page(filename, "/server/" + name)
@@ -189,10 +187,10 @@ def delete_server_details_page(server_name: str):
     os.remove("Stater/src/servers/" + server_name + ".html")
 
 
-def start():
+def start(superpath="/"):
     init_custom_servers()
     serverly.address = address
-    serverly.start()
+    serverly.start(superpath)
 
 
 def init_custom_servers():

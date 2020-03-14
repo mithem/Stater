@@ -90,17 +90,34 @@ def register_server(name: str, description: str = None, repo_url: str = None, ma
         raise TypeError("Password required.")
     components, password, joined = get_server_params(name=name, description=description, repo_url=repo_url,
                                                      main_status=main_status, components=components, password=password)
-    if description == None:
-        description = ""
-    if repo_url == None:
-        repo_url = ""
-    if main_status == None:
-        main_status = 0
-    if components == None:
-        components = {}
+    keys = ["name", "password", "joined"]
+    values = ["'" + name + "'", "'" + password + "'", "'" + joined + "'"]
+    if description != None:
+        keys.append("description")
+        values.append("'" + description + "'")
+    if repo_url != None:
+        keys.append("repoURL")
+        values.append("'" + repo_url + "'")
+    if main_status != None:
+        keys.append("mainStatus")
+        values.append(main_status)
+    if components != None:
+        keys.append("components")
+        values.append("'" + json.dumps(components)[1:-1] + "'")
+    columns = ""
+    my_values = ""
+    for key in keys:
+        columns += key + ", "
+    for value in values:
+        my_values += value + ", "
+
+    columns = columns[:-2]
+    my_values = my_values[:-2]
+    # TODO: remove insertion of 'None'-parameters (repoURL is duplicate -> raises sql error)
+    # TODO: make repoURL unique again in mysql
     try:
         exec_sql(
-            f"INSERT INTO servers (name, description, repoURL, mainStatus, components, password, joined) VALUES ('{name}', '{description}', '{repo_url}', {main_status}, '{components}', '{password}', '{joined}');", True)
+            f"INSERT INTO servers ({columns}) VALUES ({my_values});", True)
     except pymysql.err.IntegrityError as e:
         if "name" in str(e):
             raise NameAlreadyUsedError(f"Name '{name}' is already used.")
@@ -153,7 +170,7 @@ def change_server(id: int, name: str = None, description: str = None, repo_url: 
         if components_changed:
             logger.debug(f"changing components of server {id}", True)
             exec_sql(
-                f"UPDATE servers SET components='{json.dumps(components)}' WHERE id={id}", False)
+                f"UPDATE servers SET components='{json.dumps(components)[1:-1]}' WHERE id={id}", False)
         if password != None:
             logger.debug(f"changing password of server {id}", True)
             exec_sql(
