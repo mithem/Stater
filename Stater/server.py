@@ -119,9 +119,14 @@ def api_change_server(data):
             response_code = 406
             response_msg = "Parameter name or id of invalid type."
             server = {}
+        compo = data.get("components", None)
+        if compo != None:
+            components = json.loads(compo)
+        else:
+            components = None
         base.authenticate(server.get("name"), data["password"])
         base.change_server(server.get("id"), data.get("newName", None), data.get("description", None), data.get(
-            "repoURL", None), data.get("mainStatus", None), data.get("components", None), data.get("newPassword", None))
+            "repoURL", None), data.get("mainStatus", None), components, data.get("newPassword", None))
         response_code = 200
         response_msg = "Changed server successfully."
     except err.AuthenticationError:
