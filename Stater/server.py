@@ -174,6 +174,27 @@ def api_update_component(data):
     return {"response_code": response_code, "Content-type": "text/plain"}, response_msg
 
 
+@serverly.serves_post("/api/authenticate")
+def api_authenticate(data):
+    response_code = 500
+    response_msg = "error"
+    try:
+        a = base.authenticate(data["name"], data["password"])
+        if a:
+            response_code = 200
+            response_msg = "Authorized."
+        else:
+            response_code = 401
+            response_msg = "Unauthorized."
+    except KeyError:
+        response_code = 406
+        response_msg = "Unable to parse required parameters 'name' and 'password'.x"
+    except Exception as e:
+        response_code = 500
+        response_msg = str(e)
+    return {"response_code": response_code, "Content-type": "text/plain"}, response_msg
+
+
 def create_server_details_page(server: dict):
     name = server.get("name")
     repo_url = server.get("repoURL")
@@ -190,6 +211,9 @@ def create_server_details_page(server: dict):
 def delete_server_details_page(server_name: str):
     serverly.unregister("GET", "/server/"+server_name)
     os.remove("Stater/src/servers/" + server_name + ".html")
+
+
+serverly.static_page("Stater/src/dashboard.html", "/dashboard")
 
 
 def start(superpath="/"):

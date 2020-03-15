@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Stater</title>
+    <script>
+      function setCookie(cname, cvalue, exhours) {
+        var d = new Date();
+        d.setTime(d.getTime() + exhours * 60 * 60 * 1000);
+        var expires = "expires=" + d.toUTCString();
+        document.cookie = cname + "=" + cvalue + ";" + expires + ";";
+      }
+      function getCookie(cname) {
+        var name = cname + "=";
+        var decodedCookie = decodeURIComponent(document.cookie);
+        var ca = decodedCookie.split(";");
+        for (var i = 0; i < ca.length; i++) {
+          var c = ca[i];
+          while (c.charAt(0) == " ") {
+            c = c.substring(1);
+          }
+          if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+          }
+        }
+        return "";
+      }
+      function authenticate() {
+        var req = new XMLHttpRequest();
+        var result = false;
+        req.onreadystatechange = function() {
+          if (req.readyState === 4) {
+            result = req.status === 200;
+          }
+        };
+        req.open("POST", "SUPERPATH/api/authenticate", false);
+        req.send(
+          JSON.stringify({
+            name: getCookie("name"),
+            password: getCookie("password")
+          })
+        );
+        return result;
+      }
+      function updateLoginStatus() {
+        var content;
+        var authenticated = authenticate();
+        if (authenticated) {
+          content = "logged in as: " + getCookie("name");
+        } else {
+          content = "not logged in";
+        }
+        document.getElementById("loginStatus").textContent = content;
+      }
+      function showServer(data) {
+        document.querySelector(
+          "#server-content > span#description"
+        ).textContent = data.description;
+        document.querySelector("#server-content > span#name").textContent =
+          data.name;
+        document.querySelector("#server-content > span#repo-url").textContent =
+          data.repoURL;
+        document.getElementById("server-content").innerHTML +=
+          "<a href='SUPERPATH/server/" + data.name + "'>Server overview</a>";
+      }
+      function refreshServerData() {
+        var req = new XMLHttpRequest();
+        req.onreadystatechange = function() {
+          if (req.readyState === 4) {
+            if (req.status === 200) {
+              var data = JSON.parse(req.responseText);
+              showServer(data);
+            } else {
+              alert(
+                "Server response not ok. Response code: " +
+                  req.status.toString() +
+                  "\n" +
+                  req.responseText
+              );
+            }
+          }
+        };
+        req.open("POST", "SUPERPATH/api/getserver");
+        req.send(JSON.stringify({ name: getCookie("name") }));
+        updateLoginStatus();
+      }
+      function initServerDetailOnClickHandlers() {
+        //TODO: implement
+      }
+    </script>
+  </head>
+  <body>
+    <nav>
+      <span id="stater">STATER</span>
+      <span id="loginStatus"></span>
+    </nav>
+    <div id="server-content">
+      <span id="name"></span><span id="description"></span
+      ><span id="repo-url"></span>
+    </div>
+  </body>
+</html>
+<script>
+  refreshServerData();
+</script>
