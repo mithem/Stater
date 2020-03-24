@@ -5,7 +5,86 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Stater</title>
+    <link
+      href="https://fonts.googleapis.com/css?family=Poppins:200,500,600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --attention: rgb(83, 195, 240);
+      }
+      * {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      }
+      #server-content > input#name {
+        padding: 5px;
+        font-size: 18px;
+        font-family: "Poppins", sans-serif, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+          "Helvetica Neue";
+        font-weight: bold;
+        text-decoration: none;
+      }
+      #server-content > input#name::selection {
+        background-color: yellow;
+      }
+      #server-content > input#name:focus {
+        text-decoration: black underline;
+      }
+      hr {
+        border-bottom: none;
+      }
+      .textInput {
+        border: none;
+        border-radius: 0px;
+        background-color: transparent;
+        display: inline-block;
+        font-size: 14px;
+        margin: 10px;
+      }
+      .textInput#repoURL {
+        width: 400px;
+      }
+      .textInput#description {
+        display: block;
+        width: 98%;
+        border-radius: 5px;
+      }
+      .textInput#description:focus {
+        box-shadow: 0px 0px 1px 1px #23acf2;
+      }
+      .animate-hover {
+        color: black;
+        font-weight: 500;
+        background: linear-gradient(
+          to bottom,
+          var(--attention) 0%,
+          var(--attention) 100%
+        );
+        background-position: 0 100%;
+        background-repeat: repeat-x;
+        background-size: 4px 4px;
+        transition: 0.2s;
+        text-decoration: none;
+        padding: 3px;
+        border-radius: 0px;
+        font-size: 14px;
+      }
+      .animate-hover:hover {
+        background-size: 4px 50px;
+        border-radius: 5px;
+      }
+      #applySettingsBtn {
+        border: none;
+      }
+      #applySettingsBtn:disabled {
+        background: transparent;
+        color: grey;
+      }
+    </style>
     <script>
+      var oldServer;
       function setCookie(cname, cvalue, exhours) {
         var d = new Date();
         d.setTime(d.getTime() + exhours * 60 * 60 * 1000);
@@ -27,43 +106,49 @@
         }
         return "";
       }
-      function authenticate() {
+      function authenticate(callback) {
         var req = new XMLHttpRequest();
-        var result = false;
-        req.onreadystatechange = function() {
+        req.onreadystatechange = () => {
           if (req.readyState === 4) {
-            result = req.status === 200;
+            callback(req.status);
           }
         };
-        req.open("POST", "SUPERPATH/api/authenticate", false);
+        req.open("POST", "SUPERPATH/api/authenticate");
         req.send(
           JSON.stringify({
             name: getCookie("name"),
             password: getCookie("password")
           })
         );
-        return result;
       }
       function updateLoginStatus() {
-        var content;
-        var authenticated = authenticate();
-        if (authenticated) {
-          content = "logged in as: " + getCookie("name");
-        } else {
-          content = "not logged in";
-        }
-        document.getElementById("loginStatus").textContent = content;
+        cb = code => {
+          var content;
+          switch (code) {
+            case 200: {
+              content = "logged in as: " + getCookie("name");
+              break;
+            }
+            case 401: {
+              content = "not logged in";
+              break;
+            }
+            default: {
+              content = "error";
+            }
+          }
+          document.getElementById("loginStatus").textContent = content;
+        };
+        authenticate(cb);
       }
       function showServer(data) {
-        document.querySelector(
-          "#server-content > span#description"
-        ).textContent = data.description;
-        document.querySelector("#server-content > span#name").textContent =
-          data.name;
-        document.querySelector("#server-content > span#repo-url").textContent =
+        document.querySelector("#server-content > #description").textContent =
+          data.description;
+        document.querySelector("#server-content > #name").value = data.name;
+        document.querySelector("#server-content > #repoURL").value =
           data.repoURL;
-        document.getElementById("server-content").innerHTML +=
-          "<a href='SUPERPATH/server/" + data.name + "'>Server overview</a>";
+        document.getElementById("overviewPage").href =
+          "SUPERPATH/server/" + data.name;
       }
       function refreshServerData() {
         var req = new XMLHttpRequest();
@@ -71,14 +156,13 @@
           if (req.readyState === 4) {
             if (req.status === 200) {
               var data = JSON.parse(req.responseText);
+              hideApplyBtn();
+              oldServer = data;
               showServer(data);
+            } else if (req.status !== 500) {
+              document.location.href = "SUPERPATH/login";
             } else {
-              alert(
-                "Server response not ok. Response code: " +
-                  req.status.toString() +
-                  "\n" +
-                  req.responseText
-              );
+              alert("Server response not ok. Response:\n" + req.responseText);
             }
           }
         };
@@ -86,8 +170,47 @@
         req.send(JSON.stringify({ name: getCookie("name") }));
         updateLoginStatus();
       }
-      function initServerDetailOnClickHandlers() {
-        //TODO: implement
+      function applySettings() {
+        var payload = {
+          name: getCookie("name"),
+          password: getCookie("password")
+        };
+        const name = document.querySelector("#server-content > #name").value;
+        const description = document.querySelector(
+          "#server-content > #description"
+        ).value;
+        const repoURL = document.querySelector("#server-content > #repoURL")
+          .value;
+        if (name != oldServer.name) {
+          payload["newName"] = name;
+        }
+        if (description != oldServer.description) {
+          payload["description"] = description;
+        }
+        if (repoURL != oldServer.repoURL) {
+          payload["repoURL"] = repoURL;
+        }
+        if (Object.keys(payload).length >= 1) {
+          var req = new XMLHttpRequest();
+          req.onreadystatechange = () => {
+            if (req.readyState === 4) {
+              if (req.status !== 200) {
+                alert(req.responseText);
+              } else {
+                alert("Changed server successfully!");
+              }
+              hideApplyBtn();
+            }
+          };
+          req.open("POST", "SUPERPATH/api/changeserver");
+          req.send(JSON.stringify(payload));
+        }
+      }
+      function showApplyBtn() {
+        document.getElementById("applySettingsBtn").disabled = false;
+      }
+      function hideApplyBtn() {
+        document.getElementById("applySettingsBtn").disabled = true;
       }
     </script>
   </head>
@@ -97,9 +220,36 @@
       <span id="loginStatus"></span>
     </nav>
     <div id="server-content">
-      <span id="name"></span><span id="description"></span
-      ><span id="repo-url"></span>
+      <input
+        type="text"
+        id="name"
+        class="textInput"
+        onchange="showApplyBtn()"
+      />
+      <hr />
+      <input
+        type="text"
+        id="repoURL"
+        class="textInput"
+        onchange="showApplyBtn()"
+      /><br />
+      <textarea
+        id="description"
+        class="textInput"
+        onchange="showApplyBtn()"
+      ></textarea
+      ><br />
+      <a href="" id="overviewPage" class="animate-hover">Server overview</a>
     </div>
+    <br />
+    <button
+      id="applySettingsBtn"
+      class="animate-hover"
+      onclick="applySettings()"
+      disabled
+    >
+      Apply
+    </button>
   </body>
 </html>
 <script>

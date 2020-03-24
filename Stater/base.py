@@ -61,6 +61,7 @@ def exec_sql(sql_command="SELECT * FROM tasks", verbose=True, logger: Logger = N
 
 
 def authenticate(name: str, password: str):
+    """return True if authenticated. If not, raise AuthenticationError"""
     server = get_server(name)
     if server == None:
         raise ServerNotFoundError(f"Server '{name}' not found.")
@@ -113,8 +114,6 @@ def register_server(name: str, description: str = None, repo_url: str = None, ma
 
     columns = columns[:-2]
     my_values = my_values[:-2]
-    # TODO: remove insertion of 'None'-parameters (repoURL is duplicate -> raises sql error)
-    # TODO: make repoURL unique again in mysql
     try:
         exec_sql(
             f"INSERT INTO servers ({columns}) VALUES ({my_values});", True)

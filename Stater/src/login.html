@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Stater - login</title>
+  </head>
+  <body>
+    <h1>Stater login</h1>
+    <form id="loginForm">
+      <input type="text" id="serverName" />
+      <input type="text" id="serverPassword" />
+    </form>
+    <button id="loginBtn">Login</button>
+  </body>
+</html>
+<script>
+  function setCookie(cname, cvalue, exhours) {
+    var d = new Date();
+    d.setTime(d.getTime() + exhours * 60 * 60 * 1000);
+    var expires = "expires=" + d.toUTCString();
+    document.cookie = cname + "=" + cvalue + ";" + expires + ";";
+  }
+  function tryLogin() {
+    const name = document.getElementById("serverName").value;
+    const password = document.getElementById("serverPassword").value;
+    var payload = {};
+    payload["name"] = name;
+    payload["password"] = password;
+
+    var req = new XMLHttpRequest();
+    req.onreadystatechange = () => {
+      if (req.readyState === 4) {
+        if (req.status === 200) {
+          setCookie("name", name);
+          setCookie("password", password);
+          document.location.href = "SUPERPATH/dashboard";
+        } else {
+          alert(req.status + "\n" + req.responseText);
+        }
+      }
+    };
+    req.open("POST", "SUPERPATH/api/authenticate");
+    req.send(JSON.stringify(payload));
+  }
+  document.getElementById("loginBtn").addEventListener("click", tryLogin);
+</script>

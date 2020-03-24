@@ -18,7 +18,6 @@ def api_get_server(data):
     response_msg = ""
     try:
         name = data.get("name", "NOTANAME")
-        print("name:", name)
     except AttributeError:
         name = "NOTANAME"
     if name == "NOTANAME":
@@ -26,10 +25,15 @@ def api_get_server(data):
         response_msg = "Please include the name of the server you want to get data for."
     else:
         server_data = base.get_server(name=name)
-        server_data["components"] = json.loads(server_data["components"])
-        for key, value in server_data["components"].items():
-            value["name"] = key
-        response_msg = json.dumps(server_data)
+        if server_data != None:
+            del server_data["password"]
+            server_data["components"] = json.loads(server_data["components"])
+            for key, value in server_data["components"].items():
+                value["name"] = key
+            response_msg = json.dumps(server_data)
+        else:
+            response_code = 404
+            response_msg = "Server not found."
     return {"response_code": response_code, "Content-type": "application/json"}, response_msg
 
 
@@ -74,6 +78,9 @@ def api_delete_server(data):
     except err.AuthenticationError:
         response_code = 401
         response_msg = "Unauthorized."
+    except err.ServerNotFoundError:
+        response_code = 404
+        response_msg = "Server not found."
     except Exception as e:
         response_code = 406
         response_msg = str(e)
@@ -107,18 +114,11 @@ def api_change_server(data):
     response_code = 500
     response_msg = "error"
     try:
-        identifier = data.get("id", base.get_server(
-            data["name"]).get("id", None))
-        if type(identifier) == int:
-            server = base.get_server(id=identifier)
-        elif type(identifier) == str:
-            server = base.get_server(identifier)
-        elif identifier == None:
-            raise err.ServerNotFoundError()
+        id = data.get("id", -1)
+        if id == -1:
+            server = base.get_server(name=data["name"])
         else:
-            response_code = 406
-            response_msg = "Parameter name or id of invalid type."
-            server = {}
+            server = base.get_server(id=id)
         compo = data.get("components", None)
         if compo != None:
             components = json.loads(compo)
@@ -179,17 +179,20 @@ def api_authenticate(data):
     response_code = 500
     response_msg = "error"
     try:
-        a = base.authenticate(data["name"], data["password"])
-        if a:
-            response_code = 200
-            response_msg = "Authorized."
-        else:
-            response_code = 401
-            response_msg = "Unauthorized."
+        base.authenticate(data["name"], data["password"])
+        response_code = 200
+        response_msg = "Authorized."
     except KeyError:
         response_code = 406
         response_msg = "Unable to parse required parameters 'name' and 'password'.x"
+    except err.AuthenticationError:
+        response_code = 401
+        response_msg = "Unauthenticated."
+    except err.ServerNotFoundError:
+        response_code = 404
+        response_msg = "Server not found."
     except Exception as e:
+        serverly.logger.handle_exception(e)
         response_code = 500
         response_msg = str(e)
     return {"response_code": response_code, "Content-type": "text/plain"}, response_msg
@@ -201,7 +204,7 @@ def create_server_details_page(server: dict):
     with open("Stater/src/server_template.html", "r") as f:
         template = string.Template(f.read())
     server_detail_page_content = template.safe_substitute(
-        server_name=name, json_not_parsed=json.dumps({"name": name}), server_description=server.get("description"), repo_url="<a href='" + str(repo_url) + "' target='_blank'>" + str(repo_url) + "</a>")
+        server_name=name, json_not_parsed=json.dumps({"name": name}), server_description=server.get("description"), repo_url=str(repo_url))
     filename = "Stater/src/servers/" + str(name) + ".html"
     with open(filename, "w") as f:
         f.write(server_detail_page_content)
@@ -214,6 +217,7 @@ def delete_server_details_page(server_name: str):
 
 
 serverly.static_page("Stater/src/dashboard.html", "/dashboard")
+serverly.static_page("Stater/src/login.html", "/login")
 
 
 def start(superpath="/"):

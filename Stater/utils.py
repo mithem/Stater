@@ -9,7 +9,6 @@ logger = Logger("utils.log", "utils", True, True)
 
 def get_server_params(name: str = None, description: str = None, repo_url: str = None, main_status: int = None, components: dict = None, password: str = None):
     """check args for user errors and return components: str (in json format), encrypted_password: str, djoined: str"""
-    print("password:", password)
     if name == None:
         name = "validname"
     if description == None:
@@ -22,8 +21,6 @@ def get_server_params(name: str = None, description: str = None, repo_url: str =
         components = {}
     if password == None:
         password = "abcdefg12345678"
-    logger.debug("repo_url " + str(repo_url))
-    logger.debug("name " + str(name))
 
     if len(name) > 20:
         raise ValueError("name argument too long (max 20)")
@@ -42,7 +39,6 @@ def get_server_params(name: str = None, description: str = None, repo_url: str =
     if type(components) != dict:
         raise TypeError("components is not a dict.")
     elif type(components) == dict:
-        print(components)
         for key, value in components.items():
             if type(value) != dict:
                 raise TypeError(
