@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Stater - register</title>
+  </head>
+  <body>
+    <h1>Stater registration</h1>
+    <form id="registerForm">
+      <input type="text" id="serverName" />
+      <input type="text" id="serverPassword" />
+      <input type="text" id="serverDescription" />
+      <input type="text" id="serverRepoURL" />
+      <select id="serverStatus">
+        <option value="0">Available</option>
+        <option value="1">Faulty</option>
+        <option value="2">Fail</option>
+        <option value="3">Offline</option>
+      </select>
+      <textarea id="serverComponents" cols="30" rows="10"></textarea>
+    </form>
+    <button id="registerBtn">Register</button>
+  </body>
+</html>
+<script>
+  function setCookie(cname, cvalue, exhours) {
+    var d = new Date();
+    d.setTime(d.getTime() + exhours * 60 * 60 * 1000);
+    var expires = "expires=" + d.toUTCString();
+    document.cookie = cname + "=" + cvalue + ";" + expires + ";";
+  }
+  function tryRegister() {
+    const name = document.getElementById("serverName").value;
+    const password = document.getElementById("serverPassword").value;
+    const description = document.getElementById("serverDescription").value;
+    const repoURL = document.getElementById("serverRepoURL").value;
+    const status = document.getElementById("serverStatus").value;
+    var payload = {
+      name: name,
+      password: password,
+      description: description,
+      repoURL: repoURL,
+      mainStatus: Number(status)
+    };
+    console.info(payload);
+
+    var req = new XMLHttpRequest();
+    req.onreadystatechange = () => {
+      if (req.readyState === 4) {
+        if (req.status === 200) {
+          setCookie("name", name);
+          setCookie("password", password);
+          document.location.href = "SUPERPATH/dashboard";
+        } else {
+          alert(req.status + "\n" + req.responseText);
+        }
+      }
+    };
+    req.open("POST", "SUPERPATH/api/register");
+    req.send(JSON.stringify(payload));
+  }
+  document.getElementById("registerBtn").addEventListener("click", tryRegister);
+</script>

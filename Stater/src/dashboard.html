@@ -121,12 +121,20 @@
           })
         );
       }
+      function logout() {
+        setCookie("name", "");
+        setCookie("password", "");
+        document.location.href = "SUPERPATH/login";
+      }
       function updateLoginStatus() {
         cb = code => {
           var content;
           switch (code) {
             case 200: {
-              content = "logged in as: " + getCookie("name");
+              content =
+                "logged in as: " +
+                getCookie("name") +
+                "(<button id='logoutBtn' onclick='logout()'>logout</button>)";
               break;
             }
             case 401: {
@@ -137,7 +145,7 @@
               content = "error";
             }
           }
-          document.getElementById("loginStatus").textContent = content;
+          document.getElementById("loginStatus").innerHTML = content;
         };
         authenticate(cb);
       }
