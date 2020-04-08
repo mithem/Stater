@@ -77,7 +77,7 @@ def register_server(name: str, description: str = None, repo_url: str = None, ma
     :param name: a unique name for the server
     :param description: longer, human-readable description of the server (optional)
     :param repo_url: url to the github-repo (optional)
-    :param component_status: list of dicts for seperate sub-components of the server. Similar to this structure: {'some-name': {'status': 0}}
+    :param components: dict of dicts for seperate sub-components of the server. Similar to this structure: {'some-name': {'status': 0}}
     :param password: new password to set. Cannot be reset.
 
     :type name: str
@@ -87,6 +87,7 @@ def register_server(name: str, description: str = None, repo_url: str = None, ma
     :type components: dict
     :type password: str
     """
+    logger.debug("trying to register server " + name)
     if password == None:
         raise TypeError("Password required.")
     components, password, joined = get_server_params(name=name, description=description, repo_url=repo_url,
@@ -108,15 +109,15 @@ def register_server(name: str, description: str = None, repo_url: str = None, ma
     columns = ""
     my_values = ""
     for key in keys:
-        columns += key + ", "
+        columns += str(key) + ", "
     for value in values:
-        my_values += value + ", "
+        my_values += str(value) + ", "
 
     columns = columns[:-2]
     my_values = my_values[:-2]
     try:
         exec_sql(
-            f"INSERT INTO servers ({columns}) VALUES ({my_values});", True)
+            f"INSERT INTO servers ({columns}) VALUES ({my_values});", True, logger)
     except pymysql.err.IntegrityError as e:
         if "name" in str(e):
             raise NameAlreadyUsedError(f"Name '{name}' is already used.")
